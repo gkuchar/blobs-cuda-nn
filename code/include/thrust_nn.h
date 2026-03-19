@@ -20,23 +20,35 @@ namespace thrustnn {
 
 // Dot product: sum_i a[i]*b[i]
 inline float dot(const thrust::device_vector<float>& a,
-                 const thrust::device_vector<float>& b) {
-    //TODO: Implement the thrust transformation for dot product
-    return 0.0;
+                 const thrust::device_vector<float>& b) {         
+    auto first = thrust::make_zip_iterator(thrust::make_tuple(a.begin(), b.begin()));
+    auto last  = thrust::make_zip_iterator(thrust::make_tuple(a.end(), b.end()));
+    
+
+    return thrust::transform_reduce(first, last,
+    [] __device__ (thrust::tuple<float, float> zip) {
+        return thrust::get<0>(zip) * thrust::get<1>(zip)
+    }, 0.0f, thrust::plus<float>());
 }
 
 // y = y + alpha * x   (SAXPY)
 inline void saxpy(thrust::device_vector<float>& y,
                   const thrust::device_vector<float>& x,
                   float alpha) {
-    //TODO: Implement the thrust transformation for SAXPY
+    thrust::transform(y.begin(), y.end(), x.begin(), y.begin(), 
+    [alpha] __device__ (float y_val, float x_val) {
+        return x_val * alpha + y_val;
+    });
     return;
 }
 
 // y = alpha*y
 inline void scale(thrust::device_vector<float>& y, float alpha) {
-    //TODO: Implement the thrust transformation for scale
-    return;
+    thrust::transform(y.begin(), y.end(), y.begin(), 
+    [alpha] __device__ (float val) {
+        return val * alpha;
+    });
+    return;     
 }
 
 inline void sigmoid_inplace(thrust::device_vector<float>& v) {
