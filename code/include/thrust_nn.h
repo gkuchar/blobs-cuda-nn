@@ -65,15 +65,38 @@ inline void relu_inplace(thrust::device_vector<float>& v) {
 // Input: logits (device), Output: probs (device). probs may alias logits.
 inline void softmax(const thrust::device_vector<float>& logits,
                     thrust::device_vector<float>& probs) {
-    //TODO: Implement the thrust transformation for softmax
+    if (logits.size() == 0) {
+        printf("empty logits vector, division by 0 error");
+        return;
+    }
+    if (probs.size() != logits.size()) {
+        probs.resize(logits.size());
+    }
+
+    float max_logit = thrust::reduce(logits.begin(), logits.end(), std::numeric_limits<float>::lowest(), thrust::maximum<float>());
+
+    thrust::transform(logits.begin(), logits.end(), probs.begin(),
+    [max_logit] __device__ (float logit) {
+        return expf(logit - max_logit);
+    });
+
+    float sum_logits = thrust::reduce(probs.begin(), probs.end(), 0.0f, thrust::plus<float>());
+
+    sum_logits = max(sum_logits, std::numeric_limits<float>::epsilon());
+
+    thrust::transform(probs.begin(), probs.end(), probs.begin(),
+    [sum_logits] __device__ (float prob) {
+        return prob / sum_logits;
+    });
+
     return;
 }
 
 // Cross-entropy loss for one example given probs and integer label y.
 // L = -log(probs[y]) with small epsilon clamp.
 inline float cross_entropy_one(const thrust::device_vector<float>& probs, int y) {
-    //TODO: Implement the thrust transformation for cross_entropy_one
-    return 0.0;
+    float probs_y = max(std::numeric_limits<float>::epsilon(), probs[y]);
+    return -logf(probs_y);
 }
 
 } // namespace thrustnn
