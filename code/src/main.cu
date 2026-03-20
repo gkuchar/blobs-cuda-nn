@@ -58,8 +58,10 @@ int main(int argc, char *argv[]) {
 
     // 3. Training Loop
     int num_batches = num_entries / batch_size;   
-    int batch_start, batch_end;
+    int batch_start, batch_end, W_row_c;
+    float loss, error_c, cost;
     for (int i = 0; i < num_epochs; i++) {
+        cost = 0;
         for (int j = 0; j < num_batches; j++) {
             batch_start = j * batch_size;
             batch_end = min(batch_start + batch_size, num_entries);
@@ -67,7 +69,7 @@ int main(int argc, char *argv[]) {
 
                 // Calculate logit and probability of each class
                 for (int c = 0; c < num_classes; c++) {
-                    int W_row_c = c * num_parameters;
+                    W_row_c = c * num_parameters;
 
                     thrust::copy(d_W.begin() + W_row_c, d_W.begin() + W_row_c + num_parameters, d_temp_W_row.begin());
                     thrust::copy(d_X.begin() + (s * num_parameters), d_X.begin() + (s * num_parameters) + num_parameters, d_temp_X_row.begin());
@@ -75,7 +77,23 @@ int main(int argc, char *argv[]) {
                     d_logits[c] = thrustnn::dot(d_temp_W_row, d_temp_X_row) + d_b[c];
                 }
                 thrustnn::softmax(d_logits, d_probs);
+
+                // Calculate loss and accumlate into cost
+                loss = thrustnn::cross_entropy_one(d_probs, d_y[s]);
+                cost += loss;
+
+                // Compute error, update row W and b
+                for (int c = 0; c < num_classes; c++) {
+                    W_row_c = c * num_parameters;
+
+                    thrust::copy(d_W.begin() + W_row_c, d_W.begin() + W_row_c + num_parameters, d_temp_W_row.begin());
+                    error_c = (float)d_probs[c] - (c == d_y[s] ? 1 : 0);
+                    thrustnn::saxpy(d_temp_W_row, d_temp_X_row, -learning_rate * error_c);
+                    thrust::copy(d_temp_W_row.begin(), d_temp_W_row.end(), d_W.begin() + W_row_c);
+                    d_b[c] = d_b[c] - learning_rate * error_c;
+                }
             }
         }
+        printf("Epoch %d  loss: %.4f\n", i, cost / num_entries);
     }
 }
