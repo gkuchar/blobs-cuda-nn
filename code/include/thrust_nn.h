@@ -26,8 +26,8 @@ inline float dot(const thrust::device_vector<float>& a,
     
 
     return thrust::transform_reduce(first, last,
-    [] __device__ (thrust::tuple<float, float> zip) {
-        return thrust::get<0>(zip) * thrust::get<1>(zip)
+    [] __device__ (thrust::tuple<float, float> zip) -> float {
+        return thrust::get<0>(zip) * thrust::get<1>(zip);
     }, 0.0f, thrust::plus<float>());
 }
 

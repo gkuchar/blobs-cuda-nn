@@ -1,4 +1,6 @@
 #include <iostream>
+#include <random>
+#include <thrust/extrema.h>
 #include <cuda_runtime.h>
 #include "../include/data_io.h"
 #include "../include/thrust_nn.h"
@@ -11,10 +13,10 @@ int main(int argc, char *argv[]) {
     int num_entries = 0;
     int num_parameters = 0;
 
-    bool completed = dataio::load_csv_features_labels("../data/blobs2d_3class.csv", X, y, num_entries, num_parameters);
+    bool completed = dataio::load_csv_features_labels("data/blobs2d_3class.csv", X, y, num_entries, num_parameters);
 
     if (!completed) {
-        printf("Error loading data");
+        printf("Error loading data\n");
         exit(1);
     }
 
@@ -96,4 +98,24 @@ int main(int argc, char *argv[]) {
         }
         printf("Epoch %d  loss: %.4f\n", i, cost / num_entries);
     }
+
+    // 4. Evaluation
+    int correct = 0;
+    for (int s = 0; s < num_entries; s++) {
+        for (int c = 0; c < num_classes; c++) {
+            W_row_c = c * num_parameters;
+
+            thrust::copy(d_W.begin() + W_row_c, d_W.begin() + W_row_c + num_parameters, d_temp_W_row.begin());
+            thrust::copy(d_X.begin() + (s * num_parameters), d_X.begin() + (s * num_parameters) + num_parameters, d_temp_X_row.begin());
+
+            d_logits[c] = thrustnn::dot(d_temp_W_row, d_temp_X_row) + d_b[c];
+        }
+        thrustnn::softmax(d_logits, d_probs);
+
+        auto max_it = thrust::max_element(d_probs.begin(), d_probs.end());
+        int predicted = max_it - d_probs.begin();
+        if (predicted == d_y[s]) correct++;
+    }
+    printf("Accuracy: %.2f%%\n", 100.0f * correct / num_entries);
+
 }
