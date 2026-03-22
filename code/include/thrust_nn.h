@@ -52,12 +52,18 @@ inline void scale(thrust::device_vector<float>& y, float alpha) {
 }
 
 inline void sigmoid_inplace(thrust::device_vector<float>& v) {
-    //TODO: Implement the thrust transformation for sigmoid_inplace
+    thrust::transform(v.begin(), v.end(), v.begin(), 
+    [] __device__ (float val) {
+        return 1 / (1 + expf(-val));
+    });
     return;
 }
 
 inline void relu_inplace(thrust::device_vector<float>& v) {
-    //TODO: Implement the thrust transformation for relu_inplace
+    thrust::transform(v.begin(), v.end(), v.begin(), 
+    [] __device__ (float val) {
+        return val < 0 ? 0 : val;
+    });
     return;
 }
 
