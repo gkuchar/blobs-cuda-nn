@@ -6,10 +6,10 @@
 
 // Generate a simple 3-class 2D blob dataset and write to CSV.
 int main(int argc, char** argv) {
-    int n_per_class = 1500;
+    int n_per_class = 1000;
     float stddev = 0.7f;
     unsigned seed = 7;
-    std::string out = "data/blobs2d_3class.csv";
+    std::string out = "../data/large_blobs2d_3class.csv";
 
     if (argc > 1) out = argv[1];
 

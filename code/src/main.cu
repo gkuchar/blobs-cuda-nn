@@ -7,20 +7,27 @@
 
 int main(int argc, char *argv[]) {
     // MILESTONE 1: Stabilized Softmax Classifier
+    // MILESTONE 3: Adding Cuda Event Timing
+    cudaEvent_t start, stop;
+    cudaEventCreate(&start);
+    cudaEventCreate(&stop);
+    float ms = 0.0f;
     // a. Load data onto device: input matrix X, target vector y
+
     std::vector<float> X;
     std::vector<int> y;
 
     int num_entries = 0;
     int num_parameters = 0;
 
-    bool completed = dataio::load_csv_features_labels("data/blobs2d_3class.csv", X, y, num_entries, num_parameters);
+    bool completed = dataio::load_csv_features_labels(argv[1], X, y, num_entries, num_parameters);
 
     if (!completed) {
         printf("Error loading data\n");
         exit(1);
     }
 
+    cudaEventRecord(start);
     thrust::device_vector<float> d_X = X;
     thrust::device_vector<int> d_y = y;
 
@@ -120,6 +127,13 @@ int main(int argc, char *argv[]) {
     float soft_max_acc = 100.0f * correct / num_entries;
     printf("Softmax Accuracy: %.2f%%\n", soft_max_acc);
 
+    cudaEventRecord(stop);
+    cudaEventSynchronize(stop);
+
+    cudaEventElapsedTime(&ms, start, stop);
+    printf("Dataset: %s\n", argv[1]);
+    printf("Softmax Classifer GPU time: %.2f ms\n", ms);
+
     // MILESTONE 2: 1 Hidden Layer MLP
     // a. Init W1, W2, b1, b2, temp hidden vector
     int hidden_layer_size = 8;
@@ -147,6 +161,7 @@ int main(int argc, char *argv[]) {
     }
 
     // Device Weights and bias vectors
+    cudaEventRecord(start);
     thrust::device_vector<float> d_W1 = h_W1;
     thrust::device_vector<float> d_W2 = h_W2;
     thrust::device_vector<float> d_b1 = h_b1;
@@ -273,10 +288,19 @@ int main(int argc, char *argv[]) {
     float mlp_acc = 100.0f * correct / num_entries;
     printf("1 Hidden Layer MLP Accuracy: %.2f%%\n", mlp_acc);
 
+    cudaEventRecord(stop);
+    cudaEventSynchronize(stop);
+
+    cudaEventElapsedTime(&ms, start, stop);
+    printf("MLP GPU time: %.2f ms\n", ms);
+
     if (mlp_acc >= soft_max_acc) {
         printf("MLP was %.2f%% percent more accurate than Softmax\n", mlp_acc - soft_max_acc);
     }
     else {
         printf("Softmax was %.2f%% percent more accurate than MLP\n", soft_max_acc - mlp_acc);
     }
+
+    cudaEventDestroy(start);
+    cudaEventDestroy(stop);
 }
