@@ -4,6 +4,9 @@
 #include <cuda_runtime.h>
 #include "../include/data_io.h"
 #include "../include/thrust_nn.h"
+#include <cstdlib>
+#include <string>
+#include <algorithm>
 
 int main(int argc, char *argv[]) {
     // MILESTONE 1: Stabilized Softmax Classifier
@@ -12,6 +15,12 @@ int main(int argc, char *argv[]) {
     cudaEventCreate(&start);
     cudaEventCreate(&stop);
     float ms = 0.0f;
+
+    if (argc < 3) {
+        std::cerr << "Usage: " << argv[0] << " <dataset.csv> <num_epochs>\n";
+        return 1;
+    }
+
     // a. Load data onto device: input matrix X, target vector y
 
     std::vector<float> X;
@@ -33,7 +42,13 @@ int main(int argc, char *argv[]) {
 
     // b. Initalize hyperparameters + Weights and bias vectors
     float learning_rate = 0.1f;
-    int num_epochs = 200;
+
+    int num_epochs = atoi(argv[2]);
+    if (num_epochs <= 0 || num_epochs > 10000) {
+        std::cerr << "Epoch count must be between 1 and 10000\n";
+        return 1;
+    }
+
     int batch_size = 32;
     int num_classes = 3;
 
@@ -132,7 +147,7 @@ int main(int argc, char *argv[]) {
 
     cudaEventElapsedTime(&ms, start, stop);
     printf("Dataset: %s\n", argv[1]);
-    printf("Softmax Classifer GPU time: %.2f ms\n", ms);
+    printf("Softmax Classifer GPU time: %.2f seconds\n", ms / 1000.0f);
 
     // MILESTONE 2: 1 Hidden Layer MLP
     // a. Init W1, W2, b1, b2, temp hidden vector
@@ -292,7 +307,7 @@ int main(int argc, char *argv[]) {
     cudaEventSynchronize(stop);
 
     cudaEventElapsedTime(&ms, start, stop);
-    printf("MLP GPU time: %.2f ms\n", ms);
+    printf("MLP GPU time: %.2f seconds\n", ms / 1000.0f);
 
     if (mlp_acc >= soft_max_acc) {
         printf("MLP was %.2f%% percent more accurate than Softmax\n", mlp_acc - soft_max_acc);
