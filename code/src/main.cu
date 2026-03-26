@@ -147,7 +147,7 @@ int main(int argc, char *argv[]) {
 
     cudaEventElapsedTime(&ms, start, stop);
     printf("Dataset: %s\n", argv[1]);
-    printf("Softmax Classifer GPU time: %.2f seconds\n", ms / 1000.0f);
+    printf("Softmax Classifier GPU time: %.2f seconds\n", ms / 1000.0f);
 
     // MILESTONE 2: 1 Hidden Layer MLP
     // a. Init W1, W2, b1, b2, temp hidden vector
